@@ -5,7 +5,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/pion/rtp"
 	"github.com/pion/webrtc/v3/pkg/media/oggwriter"
-	ffmpeg_go "github.com/u2takey/ffmpeg-go"
+	ffmpeggo "github.com/u2takey/ffmpeg-go"
 )
 
 func createPionRTPPacket(p *discordgo.Packet) *rtp.Packet {
@@ -63,9 +63,9 @@ func (r *RtpBuffer) DumpAudio() (*bytes.Buffer, error) {
 			}
 		}
 	}
-	err = ffmpeg_go.
-		Input("pipe:", ffmpeg_go.KwArgs{"f": "ogg"}).
-		Output("-", ffmpeg_go.KwArgs{"f": "ogg", "af": "aresample=async=1"}).
+	err = ffmpeggo.
+		Input("pipe:", ffmpeggo.KwArgs{"f": "ogg"}).
+		Output("-", ffmpeggo.KwArgs{"f": "ogg", "af": "aresample=async=1"}).
 		WithInput(&bIn).
 		WithOutput(&bOut).
 		OverWriteOutput().

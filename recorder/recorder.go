@@ -3,7 +3,6 @@ package recorder
 import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/nylone/YASK/buffer"
-	"os"
 	"strconv"
 	"sync"
 )
@@ -69,30 +68,24 @@ func HandleVoice(gid string, c chan *discordgo.Packet) {
 	}
 }
 
-func DumpVoice(gid string) error {
+func DumpVoice(gid string) ([]*discordgo.File, error) {
 	// get ssrc to audio buffer
 	bm := g2bm.getBuffersMap(gid)
 	// lock the ssrc to audio buffer
 	bm.mut.Lock()
 	defer bm.mut.Unlock()
+	var files []*discordgo.File
 	for ssrc, rtpBuffer := range bm.m {
 		out, err := rtpBuffer.DumpAudio()
 		if err != nil {
-			return err
+			return nil, err
 		}
-		// open output file
-		fo, err := os.Create(strconv.Itoa(int(ssrc)) + ".ogg")
-		if err != nil {
-			return err
+		f := discordgo.File{
+			Name:        strconv.Itoa(int(ssrc)) + ".ogg",
+			ContentType: "audio/ogg",
+			Reader:      out,
 		}
-		// close fo on exit and check for its returned error
-		_, err = fo.Write(out.Bytes())
-		if err != nil {
-			return err
-		}
-		if err := fo.Close(); err != nil {
-			return err
-		}
+		files = append(files, &f)
 	}
-	return nil
+	return files, nil
 }

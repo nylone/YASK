@@ -10,15 +10,17 @@ import (
 
 // Variables used for command line parameters
 var (
-	Token     string
-	ChannelID string
-	GuildID   string
+	Token         string
+	ChannelID     string
+	TextChannelID string
+	GuildID       string
 )
 
 func init() {
 	flag.StringVar(&Token, "t", "", "Bot Token")
 	flag.StringVar(&GuildID, "g", "", "Guild in which voice channel exists")
 	flag.StringVar(&ChannelID, "c", "", "Voice channel to connect to")
+	flag.StringVar(&TextChannelID, "o", "", "Text channel to dump to")
 	flag.Parse()
 }
 
@@ -66,7 +68,15 @@ func main() {
 	}()
 
 	recorder.HandleVoice(GuildID, v.OpusRecv)
-	err = recorder.DumpVoice(GuildID)
+	f, err := recorder.DumpVoice(GuildID)
+	if err != nil {
+		return
+	}
+	ms := discordgo.MessageSend{
+		Content: "here's your dump!",
+		Files:   f,
+	}
+	_, err = s.ChannelMessageSendComplex(TextChannelID, &ms)
 	if err != nil {
 		return
 	}
