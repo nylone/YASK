@@ -10,17 +10,17 @@ import (
 
 type ssrc = uint32
 
-type gidBuffersMap struct {
-	m  map[string]*ssrcBuffersMap
+type gidMap struct {
+	m  map[string]*buffersMap
 	rw sync.RWMutex
 }
 
-type ssrcBuffersMap struct {
+type buffersMap struct {
 	m   map[ssrc]*buffer.RtpBuffer
 	mut sync.Mutex
 }
 
-func (r *gidBuffersMap) getSSRCBuffersMap(gid string) *ssrcBuffersMap {
+func (r *gidMap) getBuffersMap(gid string) *buffersMap {
 	// get read access and see if the gid is already mapped
 	r.rw.RLock()
 	m, ok := r.m[gid]
@@ -28,7 +28,7 @@ func (r *gidBuffersMap) getSSRCBuffersMap(gid string) *ssrcBuffersMap {
 		// add a new buffer to the map since gid is not mapped
 		r.rw.RUnlock() // release read lock
 		r.rw.Lock()    // get write lock
-		m = new(ssrcBuffersMap)
+		m = new(buffersMap)
 		m.m = map[ssrc]*buffer.RtpBuffer{}
 		r.m[gid] = m
 		r.rw.Unlock() // release write lock
@@ -39,25 +39,25 @@ func (r *gidBuffersMap) getSSRCBuffersMap(gid string) *ssrcBuffersMap {
 }
 
 var (
-	g2bm = gidBuffersMap{
-		m: map[string]*ssrcBuffersMap{},
+	g2bm = gidMap{
+		m: map[string]*buffersMap{},
 	} // guild to ssrc to audio buffers
 )
 
 func addPacket(gid string, ssrc ssrc, p *discordgo.Packet) {
 	// get ssrc to audio buffer
-	m := g2bm.getSSRCBuffersMap(gid)
+	bm := g2bm.getBuffersMap(gid)
 
 	// lock the ssrc to audio buffer
-	m.mut.Lock()
-	defer m.mut.Unlock()
+	bm.mut.Lock()
+	defer bm.mut.Unlock()
 
 	// get relevant audio buffer
-	b, ok := m.m[ssrc]
+	b, ok := bm.m[ssrc]
 	if !ok {
-		nb := buffer.NewBuffer()
+		nb := buffer.NewBuffer(1024)
 		b = &nb
-		m.m[ssrc] = b
+		bm.m[ssrc] = b
 	}
 
 	b.Push(p)
@@ -70,7 +70,12 @@ func HandleVoice(gid string, c chan *discordgo.Packet) {
 }
 
 func DumpVoice(gid string) error {
-	for ssrc, rtpBuffer := range g2bm.getSSRCBuffersMap(gid).m {
+	// get ssrc to audio buffer
+	bm := g2bm.getBuffersMap(gid)
+	// lock the ssrc to audio buffer
+	bm.mut.Lock()
+	defer bm.mut.Unlock()
+	for ssrc, rtpBuffer := range bm.m {
 		out, err := rtpBuffer.DumpAudio()
 		if err != nil {
 			return err

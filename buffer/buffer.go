@@ -27,9 +27,9 @@ type RtpBuffer struct {
 	pos uint
 }
 
-func NewBuffer() RtpBuffer {
+func NewBuffer(size uint) RtpBuffer {
 	return RtpBuffer{
-		buf: make([]*discordgo.Packet, 1024),
+		buf: make([]*discordgo.Packet, size),
 		pos: 0,
 	}
 }
@@ -37,7 +37,6 @@ func NewBuffer() RtpBuffer {
 func (r *RtpBuffer) Push(p *discordgo.Packet) {
 	r.buf[r.pos] = p
 	if r.pos == uint(cap(r.buf)-1) {
-		println("reset!")
 		r.pos = 0
 	} else {
 		r.pos++
